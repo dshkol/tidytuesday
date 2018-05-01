@@ -1,0 +1,80 @@
+---
+title: 'Segregated states - a #tidytuesday submission'
+author: ''
+date: '2018-05-01'
+slug: segregated-states-a-tidytuesday-submission
+categories:
+  - analysis
+  - visualization
+tags:
+  - r
+  - tidytuesday
+description: ''
+---
+
+Read about it here https://www.census.gov/hhes/www/housing/resseg/multigroup_entropy.pdf
+
+
+```{r}
+library(dplyr)
+# Grab the data
+acs <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/acs2015_county_data.csv")
+
+# Calculate county level diversity using Theil's entropy score
+vars = c("Hispanic", "White", "Black", "Native", "Asian", "Pacific")
+acs <- acs %>% 
+  mutate_at(vars(vars), function(x) x/100) %>% 
+  group_by(CensusId) %>% 
+  # Calculate state level populations by group
+  mutate(Hispanic_c = Hispanic*TotalPop, 
+         White_c = White*TotalPop,
+         Black_c = Black*TotalPop,
+         Native_c = Native*TotalPop,
+         Asian_c = Asian*TotalPop,
+         Pacific_c = Pacific*TotalPop) %>% 
+  ungroup() %>% 
+  group_by(State) %>% 
+  # Calculate state level population shares
+  mutate(Pop_s = sum(TotalPop),
+         Hispanic_s = sum(Hispanic_c)/sum(TotalPop), 
+         White_s = sum(White_c)/sum(TotalPop),
+         Black_s = sum(Black_c)/sum(TotalPop),
+         Native_s = sum(Native_c)/sum(TotalPop),
+         Asian_s = sum(Asian_c)/sum(TotalPop),
+         Pacific_s = sum(Pacific_c)/sum(TotalPop)) %>% 
+  ungroup() %>% 
+  group_by(CensusId) %>% 
+  # Calculate county level entropy score
+  mutate(E = sum(Hispanic*log(1/Hispanic)+
+                   White*log(1/White)+
+                   Black*log(1/Black)+
+                   Native*log(1/Native)+
+                   Asian*log(1/Asian)+
+                   Pacific*log(1/Pacific), na.rm = TRUE),
+         # Calculate state level entropy score
+         Es = sum(Hispanic_s*log(1/Hispanic_s)+
+                   White_s*log(1/White_s)+
+                   Black_s*log(1/Black_s)+
+                   Native_s*log(1/Native_s)+
+                   Asian_s*log(1/Asian_s)+
+                   Pacific_s*log(1/Pacific_s), na.rm = TRUE),
+         # Calculate population weighted entropy difference
+         Ed = (TotalPop*(Es-E)/(Es*Pop_s)))  %>% 
+  ungroup() %>% 
+  #Calculate entropy index of state segregation %>% 
+  group_by(State) %>% 
+  mutate(H = sum(Ed, na.rm = TRUE))
+
+```
+
+```{r}
+# Visualize
+library(ggplot2)
+library(sf)
+counties <- tigris::counties() %>% st_as_sf()
+acs_spatial <- counties %>% left_join(acs, by = c("NAME"="County"))
+
+ggplot(acs_spatial) + geom_sf(aes(fill = E), colour = NA)
+
+```
+
