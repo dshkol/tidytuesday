@@ -46,35 +46,51 @@ acs <- acs %>%
   group_by(CensusId) %>% 
   # Calculate county level entropy score
   mutate(E = sum(Hispanic*log(1/Hispanic)+
-                   White*log(1/White)+
-                   Black*log(1/Black)+
-                   Native*log(1/Native)+
-                   Asian*log(1/Asian)+
+                   White*log(1/White),
+                   Black*log(1/Black),
+                   Native*log(1/Native),
+                   Asian*log(1/Asian),
                    Pacific*log(1/Pacific), na.rm = TRUE),
          # Calculate state level entropy score
-         Es = sum(Hispanic_s*log(1/Hispanic_s)+
-                   White_s*log(1/White_s)+
-                   Black_s*log(1/Black_s)+
-                   Native_s*log(1/Native_s)+
-                   Asian_s*log(1/Asian_s)+
+         Es = sum(Hispanic_s*log(1/Hispanic_s),
+                   White_s*log(1/White_s),
+                   Black_s*log(1/Black_s),
+                   Native_s*log(1/Native_s),
+                   Asian_s*log(1/Asian_s),
                    Pacific_s*log(1/Pacific_s), na.rm = TRUE),
          # Calculate population weighted entropy difference
          Ed = (TotalPop*(Es-E)/(Es*Pop_s)))  %>% 
   ungroup() %>% 
   #Calculate entropy index of state segregation %>% 
   group_by(State) %>% 
-  mutate(H = sum(Ed, na.rm = TRUE))
+  mutate(H = sum(Ed, na.rm = TRUE)) %>% 
+  ungroup()
 
 ```
 
 ```{r}
 # Visualize
+#devtools::install_github("hrbrmstr/statebins")
+#devtools::install_github("hrbrmstr/ggcounty", dep = FALSE)
 library(ggplot2)
-library(sf)
-counties <- tigris::counties() %>% st_as_sf()
-acs_spatial <- counties %>% left_join(acs, by = c("NAME"="County"))
+library(statebins)
+library(ggcounty)
 
-ggplot(acs_spatial) + geom_sf(aes(fill = E), colour = NA)
+acs_state <- acs %>% select(State, Es, H) %>% distinct()
+
+ggplot(acs_state, aes(state = State, fill = H)) + 
+  geom_statebins(border_col = "white", lbl_size = 5) +
+  scale_fill_viridis_c(option = "magma") +
+  theme_void()
+
+# top and bottom ten states
+
+
+# Individual state county diversity maps
+ca <- ggcounty("California")
+ggca <- ca$gg + geom_map(data = acs %>% filter(State == "California"), 
+                         map = ca$map, aes(map_id = County, fill = E)) +
+  scale_fill_viridis_c()
+
 
 ```
-
