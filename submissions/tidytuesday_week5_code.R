@@ -1,21 +1,3 @@
----
-title: 'Segregated states - a #tidytuesday submission'
-author: ''
-date: '2018-05-01'
-slug: segregated-states-a-tidytuesday-submission
-categories:
-  - analysis
-  - visualization
-tags:
-  - r
-  - tidytuesday
-description: ''
----
-
-Read about it here https://www.census.gov/hhes/www/housing/resseg/multigroup_entropy.pdf
-
-
-```{r}
 # Read about it here https://www.census.gov/hhes/www/housing/resseg/multigroup_entropy.pdf
 library(dplyr)
 
@@ -49,17 +31,17 @@ acs <- acs %>%
   # Calculate county level entropy score
   mutate(E = sum(Hispanic*log(1/Hispanic)+
                    White*log(1/White),
-                   Black*log(1/Black),
-                   Native*log(1/Native),
-                   Asian*log(1/Asian),
-                   Pacific*log(1/Pacific), na.rm = TRUE),
+                 Black*log(1/Black),
+                 Native*log(1/Native),
+                 Asian*log(1/Asian),
+                 Pacific*log(1/Pacific), na.rm = TRUE),
          # Calculate state level entropy score
          Es = sum(Hispanic_s*log(1/Hispanic_s),
-                   White_s*log(1/White_s),
-                   Black_s*log(1/Black_s),
-                   Native_s*log(1/Native_s),
-                   Asian_s*log(1/Asian_s),
-                   Pacific_s*log(1/Pacific_s), na.rm = TRUE),
+                  White_s*log(1/White_s),
+                  Black_s*log(1/Black_s),
+                  Native_s*log(1/Native_s),
+                  Asian_s*log(1/Asian_s),
+                  Pacific_s*log(1/Pacific_s), na.rm = TRUE),
          # Calculate population weighted entropy difference
          Ed = (TotalPop*(Es-E)/(Es*Pop_s)))  %>% 
   ungroup() %>% 
@@ -69,9 +51,6 @@ acs <- acs %>%
          AvgE = mean(E, na.rm = TRUE)) %>% 
   ungroup()
 
-```
-
-```{r}
 # Visualize
 #devtools::install_github("hrbrmstr/statebins")
 library(ggplot2)
@@ -99,7 +78,7 @@ statebin <- ggplot(acs_state, aes(state = State, fill = brks)) +
        subtitle = "             Estimating state-level racial segregation from county-level population data\n             using Theil's H, or the Multigroup Entropy Index")
 
 # Plot ranking 
-  div_rank <- ggplot(acs_state ,aes(x = reorder(State,AvgE), y = AvgE, colour = brks)) +
+div_rank <- ggplot(acs_state ,aes(x = reorder(State,AvgE), y = AvgE, colour = brks)) +
   geom_lollipop(point.size = 2) + 
   coord_flip() + 
   labs(title = "State-level county diversity entropy score", 
@@ -108,7 +87,7 @@ statebin <- ggplot(acs_state, aes(state = State, fill = brks)) +
        caption = "@dshkol - For #tidytuesday week5 - Data: American Community Survey, 2015") +
   guides(colour = guide_legend(override.aes = list(size=5))) +
   scale_colour_viridis_d("",option = "magma", direction = -1) +
-    theme(panel.background = element_rect(fill = "grey92"),
+  theme(panel.background = element_rect(fill = "grey92"),
         plot.background = element_rect(fill = "grey92"),
         panel.grid = element_blank(),
         plot.title = element_text(size = 20, face = "bold", family = "IBM Plex Sans",
@@ -118,14 +97,10 @@ statebin <- ggplot(acs_state, aes(state = State, fill = brks)) +
         legend.position = c(0.8,0.3),
         legend.key = element_blank(),
         legend.key.size = unit(2,"line"))
-```
 
-```{r}
 # Layout
 library(grid)
 library(gridExtra)
 
 plot <- grid.arrange(statebin, div_rank, ncol = 1)
 ggsave("tidytuesday.png", plot = plot, width = 8.5, height = 11, units = "in", dpi = 300)
-
-```
